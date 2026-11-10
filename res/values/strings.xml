@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Apple Music Fix</string>
+    <string name="subtitle">Fixes wired headset controls in Apple Music not skipping to the previous track</string>
+    <string name="status_checking">Checking…</string>
+    <string name="status_active">Module active</string>
+    <string name="status_inactive">Module inactive</string>
+    <string name="btn_force_stop">Force stop Apple Music</string>
+    <string name="tip_check">If it shows inactive, check: enable this module in LSPosed, select Apple Music in its scope (the default scope is built in), connect a wired headset the system recognizes, then force stop and reopen Apple Music</string>
+    <string name="tip_usage">With a wired headset connected, tap Force stop, reopen Apple Music, then press the headset button three times to skip to the previous track</string>
+    <string name="tip_version">Only tested on Apple Music 7.0.0. Other versions are untested. Bluetooth headsets are not affected by this module</string>
+    <string name="notice_title">Notice</string>
+    <string name="notice_message">This module fixes the issue where the device cannot use a wired headset to skip to the previous track. Connect a wired headset, tap Force stop, then open Apple Music and use the headset to skip to the previous track normally</string>
+    <string name="update_title">Module updated</string>
+    <string name="update_message">Please force stop Apple Music</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="toast_stopped">Force stopped. Please open the app manually</string>
+    <string name="toast_stop_failed">Failed to force stop. Grant ROOT or stop the process manually</string>
+    <string name="state_stopping">Force stopping…</string>
+    <string name="state_stopped">Force stopped. Please open Apple Music manually</string>
+    <string name="state_stop_failed">Failed to force stop. Grant ROOT or stop the process manually</string>
+</resources>

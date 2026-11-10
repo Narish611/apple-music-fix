@@ -1,0 +1,12 @@
+build/
+*.apk
+*.aab
+*.keystore
+*.jks
+xposed-api.jar
+*.tgz
+*.log
+.DS_Store
+.idea/
+*.iml
+local.properties

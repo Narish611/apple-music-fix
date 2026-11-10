@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AM 有线耳机修复</string>
+    <string name="subtitle">修复 Apple Music 使用有线耳机不能耳机操控至上一首</string>
+    <string name="status_checking">检测中…</string>
+    <string name="status_active">模块已生效</string>
+    <string name="status_inactive">模块未生效</string>
+    <string name="btn_force_stop">强制停止 Apple Music</string>
+    <string name="tip_check">显示未生效时请检查：LSPosed 里启用本模块，作用域勾选 Apple Music（已内置默认作用域），连接系统可识别的有线耳机，强制停止并打开 Apple Music</string>
+    <string name="tip_usage">插上有线耳机后点击强制停止后重新打开 Apple Music，按三次耳机键即可使用正常的切换上一首功能</string>
+    <string name="tip_version">模块只测试了 Apple Music 7.0.0，其他版本请自行测试，蓝牙耳机不受此模块影响</string>
+    <string name="notice_title">注意事项</string>
+    <string name="notice_message">此模块修复了设备不能正常使用有线耳机操控之上一首的问题，请连接有线耳机后点击强制停止，然后打开 Apple Music 使用耳机操控正常切换至上一首</string>
+    <string name="update_title">模块已更新</string>
+    <string name="update_message">请强行停止 Apple Music</string>
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="toast_stopped">已强制停止，请手动打开</string>
+    <string name="toast_stop_failed">未能强制停止，请授予 ROOT 权限或手动停止进程</string>
+    <string name="state_stopping">正在强制停止…</string>
+    <string name="state_stopped">已强制停止，请手动打开 Apple Music</string>
+    <string name="state_stop_failed">未能强制停止，请授予 ROOT 权限或手动停止进程</string>
+</resources>
