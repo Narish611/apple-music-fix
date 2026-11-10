@@ -58,7 +58,7 @@ Parts of the code and documentation were written with the help of **DeepSeek**, 
 
 ## Disclaimer
 
-Not affiliated with Apple Inc. Apple Music is a trademark of Apple Inc. Use at your own risk.
+Not affiliated with Apple Inc. Apple Music is a trademark of Apple Inc. For personal use only. Use at your own risk.
 
 ## License
 

@@ -58,7 +58,7 @@ Linux 下需要把 `sips` 换成 ImageMagick 之类的工具，并调整 JBR 路
 
 ## 免责声明
 
-非官方项目，与 Apple Inc. 无关。Apple Music 是 Apple Inc. 的商标。使用风险自负。
+非官方项目，与 Apple Inc. 无关。Apple Music 是 Apple Inc. 的商标。仅支持个人使用，使用风险自负。
 
 ## 许可证
 
