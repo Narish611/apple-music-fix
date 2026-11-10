@@ -21,7 +21,7 @@
     <string name="state_stopped">Force stopped. Please open Apple Music manually</string>
     <string name="state_stop_failed">Failed to force stop. Grant ROOT or stop the process manually</string>
     <string name="about_title">About</string>
-    <string name="about_info">Author: narish61\nVersion: %1$s (%2$d)</string>
+    <string name="about_info">Author: narish61 (with DeepSeek V4.1)\nVersion: %1$s (%2$d)</string>
     <string name="about_project">Project page</string>
     <string name="about_check_update">Check for updates</string>
     <string name="checking">Checking for updates…</string>

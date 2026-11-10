@@ -29,7 +29,7 @@ An LSPosed module that fixes the issue where triple-clicking the headset button 
 
 ## Privacy
 
-- Network access is used only for the update check against a raw file on GitHub; no data is collected or uploaded
+- No data is collected or uploaded
 - No data is collected or uploaded
 - Root is used only to force stop Apple Music and read the module's enabled state from LSPosed
 
@@ -42,7 +42,7 @@ export AMFIX_KS_PASS=your_signing_password
 bash build.sh
 ```
 
-The APK is written to `build/amfix.apk`. The first build creates `dsh.keystore`; do not commit it.
+The APK is written to `build/amfix.apk`. The first build creates `dsh.keystore`.
 
 On Linux, replace `sips` with a tool such as ImageMagick and adjust the JBR path.
 

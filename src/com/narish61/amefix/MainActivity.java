@@ -29,6 +29,7 @@ import android.view.ViewGroup;
 import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -125,9 +126,12 @@ public class MainActivity extends Activity {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         ImageButton gear = new ImageButton(this);
-        gear.setImageResource(android.R.drawable.ic_menu_manage);
+        gear.setImageResource(R.drawable.ic_gear);
         gear.setBackgroundColor(Color.TRANSPARENT);
         gear.setColorFilter(colorPlain, PorterDuff.Mode.SRC_IN);
+        gear.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int gp = (int) (7 * d);
+        gear.setPadding(gp, gp, gp, gp);
         gear.setContentDescription(getString(R.string.about_title));
         gear.setOnClickListener(v -> showAbout());
         int gs = (int) (40 * d);

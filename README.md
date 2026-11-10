@@ -29,7 +29,7 @@
 
 ## 隐私
 
-- 只在「检查更新」时访问 GitHub 的 raw 文件，不收集、不上传任何数据
+- 不收集、不上传任何数据
 - 不收集、不上传任何数据
 - root 只用于：强制停止 Apple Music、读取 LSPosed 的模块启用状态
 
@@ -42,7 +42,7 @@ export AMFIX_KS_PASS=你的签名密码
 bash build.sh
 ```
 
-产物在 `build/amfix.apk`。首次构建会生成 `dsh.keystore`，请勿提交。
+产物在 `build/amfix.apk`。首次构建会生成 `dsh.keystore`。
 
 Linux 下需要把 `sips` 换成 ImageMagick 之类的工具，并调整 JBR 路径。
 

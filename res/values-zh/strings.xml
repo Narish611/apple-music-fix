@@ -21,7 +21,7 @@
     <string name="state_stopped">已强制停止，请手动打开 Apple Music</string>
     <string name="state_stop_failed">未能强制停止，请授予 ROOT 权限或手动停止进程</string>
     <string name="about_title">关于</string>
-    <string name="about_info">作者：narish61\n版本：%1$s（%2$d）</string>
+    <string name="about_info">作者：narish61（DeepSeek V4.1 协作）\n版本：%1$s（%2$d）</string>
     <string name="about_project">项目地址</string>
     <string name="about_check_update">检查更新</string>
     <string name="checking">正在检查更新…</string>

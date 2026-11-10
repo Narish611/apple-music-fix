@@ -3,18 +3,18 @@
 ## 版本规则
 
 - 包名：`com.narish61.amefix`
-- versionName：`1.1.0`
-- versionCode：`yyMMddHH`（北京时间，24 小时制），例如 `26111102`
-- 只改应用内文字：versionName 第三位 +1（`1.0.0` → `1.0.1`）
-- 改机制（例如检测逻辑、按键处理）：versionName 第二位 +1（`1.0.0` → `1.1.0`）
+- versionName：`1.1.1`
+- versionCode：`yyMMddHH`（北京时间，24 小时制），同一小时内连发多版时顺延（`26111102` → `26111103`）
+- 只改应用内文字/图标：versionName 第三位 +1
+- 改机制（例如检测逻辑、按键处理）：versionName 第二位 +1
 - 大版本更新：由用户指定
 
 ## 当前
 
-- versionName：1.1.0
-- versionCode：26111102
+- versionName：1.1.1
+- versionCode：26111103
 - 日期：2026-11-11 02 时
-- 变更：新增右上角齿轮（作者信息、项目地址、检查更新），增加 `INTERNET` 权限
+- 变更：右上角齿轮换成自定义图标，关于页加 AI 协作说明
 
 ## 构建
 
