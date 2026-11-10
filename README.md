@@ -83,6 +83,12 @@ Linux 下需要把 `sips` 换成 ImageMagick 之类的工具，并调整 JBR 路
 - `logcat -d | grep AMFix` 的输出
 - 设备型号、系统版本、Apple Music 版本
 
+## AI 声明 / AI Disclosure
+
+本项目的代码和文档在 AI 编程助手的协助下完成：**DeepSeek**（运行在 **DeepSeek Harness** 上，模型为 **deepseek-flash**）。需求确认、功能设计、真机测试和发布由维护者完成。AI 生成的内容可能存在错误，请以实际测试为准。
+
+Parts of the code and documentation were written with the help of **DeepSeek**, an AI coding assistant running on **DeepSeek Harness** with the **deepseek-flash** model. Requirements, design decisions, on-device testing and releases were done by the maintainer. AI-generated content may contain mistakes; please verify with real testing.
+
 ## 免责声明 / Disclaimer
 
 非官方项目，与 Apple Inc. 无关。Apple Music 是 Apple Inc. 的商标。使用风险自负。
