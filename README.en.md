@@ -10,6 +10,7 @@ An LSPosed module that fixes the issue where triple-clicking the headset button 
 - Wired headsets only; Bluetooth headsets are not affected
 - Status detection: the module shows "Module active" only when Apple Music is running, a wired headset is connected, and the module is enabled in LSPosed
 - Dark mode and Chinese/English UI
+- Gear menu in the top-right: author info, project page, update check
 
 ## Requirements
 
@@ -28,7 +29,7 @@ An LSPosed module that fixes the issue where triple-clicking the headset button 
 
 ## Privacy
 
-- No network permission
+- Network access is used only for the update check against a raw file on GitHub; no data is collected or uploaded
 - No data is collected or uploaded
 - Root is used only to force stop Apple Music and read the module's enabled state from LSPosed
 

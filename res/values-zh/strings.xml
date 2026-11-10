@@ -20,4 +20,15 @@
     <string name="state_stopping">正在强制停止…</string>
     <string name="state_stopped">已强制停止，请手动打开 Apple Music</string>
     <string name="state_stop_failed">未能强制停止，请授予 ROOT 权限或手动停止进程</string>
+    <string name="about_title">关于</string>
+    <string name="about_info">作者：narish61\n版本：%1$s（%2$d）</string>
+    <string name="about_project">项目地址</string>
+    <string name="about_check_update">检查更新</string>
+    <string name="checking">正在检查更新…</string>
+    <string name="check_failed">检查失败，请稍后重试</string>
+    <string name="update_available">发现新版本</string>
+    <string name="update_available_msg">最新版本：%1$s</string>
+    <string name="update_go">去下载</string>
+    <string name="up_to_date">已是最新版本</string>
+    <string name="open_failed">无法打开链接</string>
 </resources>

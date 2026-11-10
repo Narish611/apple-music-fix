@@ -13,32 +13,43 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Base64;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsetsController;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
 
     private static final String PKG = "com.apple.android.music";
     private static final String SELF = "com.narish61.amefix";
+    private static final String PROJECT_URL = "https://github.com/Narish611/apple-music-fix";
+    private static final String UPDATE_URL =
+            "https://raw.githubusercontent.com/Narish611/apple-music-fix/main/update.json";
     private static final long POLL_MS = 1000L;
     private static final long PONG_VALID_MS = 3000L;
     private static final long LSP_CHECK_MS = 5000L;
@@ -102,11 +113,27 @@ public class MainActivity extends Activity {
             return insets;
         });
 
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView title = new TextView(this);
         title.setText(R.string.app_name);
         title.setTextSize(22);
         title.setTextColor(colorPlain);
-        root.addView(title);
+        header.addView(title, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        ImageButton gear = new ImageButton(this);
+        gear.setImageResource(android.R.drawable.ic_menu_manage);
+        gear.setBackgroundColor(Color.TRANSPARENT);
+        gear.setColorFilter(colorPlain, PorterDuff.Mode.SRC_IN);
+        gear.setContentDescription(getString(R.string.about_title));
+        gear.setOnClickListener(v -> showAbout());
+        int gs = (int) (40 * d);
+        header.addView(gear, new LinearLayout.LayoutParams(gs, gs));
+
+        root.addView(header);
 
         TextView sub = new TextView(this);
         sub.setText(R.string.subtitle);
@@ -175,6 +202,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String currentVersionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
     private void checkDialogs() {
         long code = currentVersionCode();
         if (code < 0) {
@@ -218,6 +253,111 @@ public class MainActivity extends Activity {
                     finish();
                 })
                 .show();
+    }
+
+    private void showAbout() {
+        float d = getResources().getDisplayMetrics().density;
+        int p = (int) (16 * d);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(p, p, p, 0);
+
+        TextView info = new TextView(this);
+        info.setText(getString(R.string.about_info, currentVersionName(), currentVersionCode()));
+        info.setTextSize(14);
+        info.setTextColor(dark ? Color.WHITE : Color.BLACK);
+        box.addView(info);
+
+        Button project = new Button(this);
+        project.setText(R.string.about_project);
+        project.setOnClickListener(v -> openUrl(PROJECT_URL));
+        box.addView(project);
+
+        Button check = new Button(this);
+        check.setText(R.string.about_check_update);
+        check.setOnClickListener(v -> checkUpdate());
+        box.addView(check);
+
+        dialogBuilder()
+                .setTitle(R.string.about_title)
+                .setView(box)
+                .setPositiveButton(R.string.ok, null)
+                .show();
+    }
+
+    private void openUrl(String url) {
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Throwable t) {
+            Toast.makeText(this, R.string.open_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void checkUpdate() {
+        Toast.makeText(this, R.string.checking, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String body = httpGet(UPDATE_URL);
+            int code = -1;
+            String name = "";
+            String url = "";
+            try {
+                JSONObject o = new JSONObject(body);
+                code = o.optInt("versionCode", -1);
+                name = o.optString("versionName", "");
+                url = o.optString("url", "");
+            } catch (Throwable ignored) {
+            }
+            final int fCode = code;
+            final String fName = name;
+            final String fUrl = url;
+            runOnUiThread(() -> {
+                if (fCode < 0) {
+                    Toast.makeText(this, R.string.check_failed, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (fCode > currentVersionCode()) {
+                    dialogBuilder()
+                            .setTitle(R.string.update_available)
+                            .setMessage(getString(R.string.update_available_msg, fName))
+                            .setPositiveButton(R.string.update_go, (d, w) ->
+                                    openUrl(fUrl.isEmpty() ? PROJECT_URL + "/releases/latest" : fUrl))
+                            .setNegativeButton(R.string.cancel, null)
+                            .show();
+                } else {
+                    Toast.makeText(this, R.string.up_to_date, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }).start();
+    }
+
+    private String httpGet(String url) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            c.setRequestProperty("User-Agent", "amfix");
+            c.setInstanceFollowRedirects(true);
+            if (c.getResponseCode() != 200) {
+                return null;
+            }
+            InputStream is = c.getInputStream();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = is.read(buf)) > 0) {
+                bos.write(buf, 0, n);
+            }
+            return bos.toString("UTF-8");
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            if (c != null) {
+                c.disconnect();
+            }
+        }
     }
 
     @Override

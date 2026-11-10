@@ -20,4 +20,15 @@
     <string name="state_stopping">Force stopping…</string>
     <string name="state_stopped">Force stopped. Please open Apple Music manually</string>
     <string name="state_stop_failed">Failed to force stop. Grant ROOT or stop the process manually</string>
+    <string name="about_title">About</string>
+    <string name="about_info">Author: narish61\nVersion: %1$s (%2$d)</string>
+    <string name="about_project">Project page</string>
+    <string name="about_check_update">Check for updates</string>
+    <string name="checking">Checking for updates…</string>
+    <string name="check_failed">Check failed, please try again later</string>
+    <string name="update_available">Update available</string>
+    <string name="update_available_msg">Latest version: %1$s</string>
+    <string name="update_go">Download</string>
+    <string name="up_to_date">You\'re up to date</string>
+    <string name="open_failed">Could not open the link</string>
 </resources>
