@@ -57,7 +57,7 @@ echo "== package =="
 cd build
 zip -q -j base.apk dex/classes.dex
 mkdir -p assets
-cp ../assets/xposed_init assets/xposed_init
+cp -R ../assets/. assets/
 zip -q -r base.apk assets
 
 "$BT/zipalign" -f 4 base.apk aligned.apk

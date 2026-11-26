@@ -10,3 +10,6 @@ xposed-api.jar
 .idea/
 *.iml
 local.properties
+
+# 内置合并字体（版权原因不随源码发布）
+assets/fonts/

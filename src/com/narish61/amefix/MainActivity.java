@@ -14,6 +14,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -31,6 +34,8 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,9 +62,12 @@ public class MainActivity extends Activity {
     private static final String PREFS = "amfix";
     private static final String KEY_VER = "last_version";
     private static final String KEY_FIRST = "first_run_done";
+    private static final String KEY_FONT_STOPPED = "lyrics_font_stopped_at";
+    private static final String KEY_MODULE_PATH = "lyrics_font_module_path";
 
     private final Handler h = new Handler(Looper.getMainLooper());
     private TextView status;
+    private View statusDot;
     private volatile long lastPongAt;
     private volatile int lspEnabled = -1; // -1 unknown, 0 disabled, 1 enabled
     private boolean lspChecking;
@@ -67,10 +75,25 @@ public class MainActivity extends Activity {
     private int lspFailCount;
     private boolean lspUnavailable;
     private boolean dark;
+    private PopupWindow overflowMenu;
+    private boolean masterOn = true;
+
+    // Material 3 tonal palette (baseline purple scheme)
+    private int cPrimary;
+    private int cOnPrimary;
+    private int cPrimaryContainer;
+    private int cOnPrimaryContainer;
+    private int cSecondaryContainer;
+    private int cOnSecondaryContainer;
+    private int cSurface;
+    private int cSurfaceContainer;
+    private int cOnSurface;
+    private int cOnSurfaceVariant;
+    private int cOutline;
+
     private int colorOk;
     private int colorBad;
     private int colorWarn;
-    private int colorPlain;
 
     private final Runnable poll = new Runnable() {
         @Override
@@ -94,89 +117,266 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // 必须在写入任何偏好之前判断：数据被「清除数据」后 getAll() 为空，等同首次安装。
+        final boolean freshInstall =
+                getSharedPreferences(PREFS, MODE_PRIVATE).getAll().isEmpty();
+
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putString(KEY_MODULE_PATH, getApplicationInfo().sourceDir).apply();
+        masterOn = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getBoolean(MoreToolsActivity.KEY_MASTER_ENABLED, true);
+
         int night = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         dark = night == Configuration.UI_MODE_NIGHT_YES;
-        colorOk = dark ? 0xFF81C784 : 0xFF2E7D32;
-        colorBad = dark ? 0xFFE57373 : 0xFFC62828;
-        colorWarn = dark ? 0xFFFFB74D : 0xFFEF6C00;
-        colorPlain = dark ? Color.WHITE : Color.BLACK;
+
+        if (dark) {
+            cPrimary = 0xFFD0BCFF;
+            cOnPrimary = 0xFF381E72;
+            cPrimaryContainer = 0xFF4F378B;
+            cOnPrimaryContainer = 0xFFEADDFF;
+            cSecondaryContainer = 0xFF4A4458;
+            cOnSecondaryContainer = 0xFFE8DEF8;
+            cSurface = 0xFF1C1B1F;
+            cSurfaceContainer = 0xFF2B2930;
+            cOnSurface = 0xFFE6E1E5;
+            cOnSurfaceVariant = 0xFFCAC4D0;
+            cOutline = 0xFF938F99;
+            colorOk = 0xFF7DCB96;
+            colorBad = 0xFFFFB4AB;
+            colorWarn = 0xFFFFB74D;
+        } else {
+            cPrimary = 0xFF6750A4;
+            cOnPrimary = 0xFFFFFFFF;
+            cPrimaryContainer = 0xFFEADDFF;
+            cOnPrimaryContainer = 0xFF21005D;
+            cSecondaryContainer = 0xFFE8DEF8;
+            cOnSecondaryContainer = 0xFF1E192B;
+            cSurface = 0xFFFFFBFE;
+            cSurfaceContainer = 0xFFF3EDF7;
+            cOnSurface = 0xFF1D1B20;
+            cOnSurfaceVariant = 0xFF49454F;
+            cOutline = 0xFF79747E;
+            colorOk = 0xFF2E7D32;
+            colorBad = 0xFFB3261E;
+            colorWarn = 0xFF9A6700;
+        }
 
         float d = getResources().getDisplayMetrics().density;
-        final int p = (int) (20 * d);
+        final int p = (int) (24 * d);
+        final int pad = (int) (16 * d);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(dark ? Color.BLACK : Color.WHITE);
-        root.setPadding(p, p, p, p);
+        root.setBackgroundColor(cSurface);
+        root.setPadding(pad, p, pad, pad);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
-            v.setPadding(p, p + insets.getSystemWindowInsetTop(),
-                    p, p + insets.getSystemWindowInsetBottom());
+            v.setPadding(pad, p + insets.getSystemWindowInsetTop(),
+                    pad, p + insets.getSystemWindowInsetBottom());
             return insets;
         });
 
+        // M3 headline: title + tonal icon button
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
         title.setText(R.string.app_name);
-        title.setTextSize(22);
-        title.setTextColor(colorPlain);
+        title.setTextSize(24);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(cOnSurface);
         header.addView(title, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        ImageButton gear = new ImageButton(this);
-        gear.setImageResource(R.drawable.ic_gear);
-        gear.setBackgroundColor(Color.TRANSPARENT);
-        gear.setColorFilter(colorPlain, PorterDuff.Mode.SRC_IN);
-        gear.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        int gp = (int) (7 * d);
-        gear.setPadding(gp, gp, gp, gp);
-        gear.setContentDescription(getString(R.string.about_title));
-        gear.setOnClickListener(v -> showAbout());
-        int gs = (int) (40 * d);
-        header.addView(gear, new LinearLayout.LayoutParams(gs, gs));
+        Switch master = new Switch(this);
+        master.setThumbTintList(masterTint(cOnPrimary, cOutline, dark));
+        master.setTrackTintList(masterTint(cPrimary, cOutline, dark));
+        master.setChecked(masterOn);
+        master.setContentDescription(getString(R.string.app_name));
+        master.setOnCheckedChangeListener((button, checked) -> {
+            masterOn = checked;
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putBoolean(MoreToolsActivity.KEY_MASTER_ENABLED, checked).apply();
+            FontStateReceiver.pushState(this);
+            updateStatus();
+            Toast.makeText(this, checked
+                            ? R.string.master_switch_on_toast
+                            : R.string.master_switch_off_toast,
+                    Toast.LENGTH_SHORT).show();
+        });
+        header.addView(master, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        ImageButton more = new ImageButton(this);
+        more.setImageResource(R.drawable.ic_more_vert);
+        more.setBackground(roundRect(cSecondaryContainer, 50f));
+        more.setColorFilter(cOnSecondaryContainer, PorterDuff.Mode.SRC_IN);
+        more.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int gp = (int) (9 * d);
+        more.setPadding(gp, gp, gp, gp);
+        more.setContentDescription(getString(R.string.menu_more));
+        more.setOnClickListener(v -> showOverflowMenu(v));
+        int gs = (int) (44 * d);
+        header.addView(more, new LinearLayout.LayoutParams(gs, gs));
         root.addView(header);
 
+        // M3 body: supporting text
         TextView sub = new TextView(this);
         sub.setText(R.string.subtitle);
-        sub.setTextSize(13);
-        sub.setTextColor(colorPlain);
-        sub.setPadding(0, (int) (6 * d), 0, (int) (16 * d));
+        sub.setTextSize(14);
+        sub.setTextColor(cOnSurfaceVariant);
+        sub.setPadding(0, (int) (8 * d), 0, (int) (24 * d));
         root.addView(sub);
+
+        // M3 card: status surface container with leading state dot
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setBackground(roundRect(cSurfaceContainer, 16f));
+        int cp = (int) (18 * d);
+        card.setPadding(cp, cp, cp, cp);
+
+        View dot = new View(this);
+        statusDot = dot;
+        dot.setBackground(dotShape(cPrimary));
+        int ds = (int) (12 * d);
+        card.addView(dot, new LinearLayout.LayoutParams(ds, ds));
 
         status = new TextView(this);
         status.setText(R.string.status_checking);
-        status.setTextSize(16);
-        status.setTextColor(colorPlain);
-        status.setPadding(0, 0, 0, (int) (10 * d));
-        root.addView(status);
-
-        Button stop = new Button(this);
-        stop.setText(R.string.btn_force_stop);
-        stop.setOnClickListener(v -> forceStop());
-        if (dark) {
-            stop.setTextColor(Color.WHITE);
-            stop.setBackgroundTintList(ColorStateList.valueOf(0xFF333333));
-        }
-        root.addView(stop, new LinearLayout.LayoutParams(
+        status.setTextSize(17);
+        status.setTypeface(Typeface.DEFAULT_BOLD);
+        status.setTextColor(cOnSurfaceVariant);
+        status.setPadding((int) (14 * d), 0, 0, 0);
+        card.addView(status, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        root.addView(card, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        // M3 filled button: force stop
+        Button stop = new Button(this);
+        stop.setText(R.string.btn_force_stop);
+        stop.setTextSize(15);
+        stop.setTypeface(Typeface.DEFAULT_BOLD);
+        stop.setTextColor(cOnPrimary);
+        stop.setBackground(roundRect(cPrimary, 20f));
+        stop.setAllCaps(false);
+        stop.setOnClickListener(v -> forceStop());
+        LinearLayout.LayoutParams stopLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (52 * d));
+        stopLp.topMargin = (int) (20 * d);
+        root.addView(stop, stopLp);
+
+        // M3 body: tips in a tonal container
         TextView tip = new TextView(this);
         tip.setText(getString(R.string.tip_check) + "\n\n"
                 + getString(R.string.tip_usage) + "\n\n"
                 + getString(R.string.tip_version));
         tip.setTextSize(13);
-        tip.setTextColor(colorPlain);
-        tip.setPadding(0, p, 0, 0);
-        root.addView(tip);
+        tip.setTextColor(cOnSurfaceVariant);
+        tip.setBackground(roundRect(cSurfaceContainer, 16f));
+        tip.setPadding(cp, cp, cp, cp);
+        LinearLayout.LayoutParams tipLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tipLp.topMargin = (int) (24 * d);
+        root.addView(tip, tipLp);
 
         setContentView(root);
 
         applySystemBars();
 
-        checkDialogs();
+        checkDialogs(freshInstall);
+    }
+
+    private GradientDrawable roundRect(int color, float radiusDp) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.RECTANGLE);
+        gd.setColor(color);
+        gd.setCornerRadius(radiusDp * getResources().getDisplayMetrics().density);
+        return gd;
+    }
+
+    private GradientDrawable dotShape(int color) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.OVAL);
+        gd.setColor(color);
+        return gd;
+    }
+
+    private ColorStateList masterTint(int checked, int unchecked, boolean night) {
+        int[][] states = new int[][]{
+                new int[]{android.R.attr.state_checked},
+                new int[]{},
+        };
+        return new ColorStateList(states, new int[]{checked, unchecked});
+    }
+
+    private void showOverflowMenu(View anchor) {
+        if (overflowMenu != null && overflowMenu.isShowing()) {
+            dismissOverflowMenu();
+            return;
+        }
+
+        float d = getResources().getDisplayMetrics().density;
+        int itemPadV = (int) (12 * d);
+        int itemPadH = (int) (18 * d);
+
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.VERTICAL);
+        menu.setBackground(roundRect(cSurfaceContainer, 12f));
+        menu.setPadding(0, (int) (4 * d), 0, (int) (4 * d));
+
+        TextView moreTools = overflowMenuItem(getString(R.string.menu_more_tools),
+                itemPadH, itemPadV, v -> {
+                    dismissOverflowMenu();
+                    startActivity(new Intent(this, MoreToolsActivity.class));
+                overridePendingTransition(R.anim.slide_in_right,
+                        R.anim.slide_out_left);
+                });
+        TextView about = overflowMenuItem(getString(R.string.about_title),
+                itemPadH, itemPadV, v -> {
+                    dismissOverflowMenu();
+                    startActivity(new Intent(this, AboutActivity.class));
+                    overridePendingTransition(R.anim.slide_in_right,
+                            R.anim.slide_out_left);
+                });
+        menu.addView(moreTools);
+        menu.addView(about);
+
+        overflowMenu = new PopupWindow(menu, ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        overflowMenu.setOutsideTouchable(true);
+        overflowMenu.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            overflowMenu.setElevation(8 * d);
+        }
+        overflowMenu.setOnDismissListener(() -> overflowMenu = null);
+        overflowMenu.showAsDropDown(anchor, 0, (int) (8 * d));
+    }
+
+    private TextView overflowMenuItem(String text, int padH, int padV,
+                                      View.OnClickListener click) {
+        TextView item = new TextView(this);
+        item.setText(text);
+        item.setTextSize(15);
+        item.setTextColor(cOnSurface);
+        item.setPadding(padH, padV, padH, padV);
+        item.setMinWidth((int) (132 * getResources().getDisplayMetrics().density));
+        item.setOnClickListener(click);
+        return item;
+    }
+
+    private void dismissOverflowMenu() {
+        if (overflowMenu != null) {
+            overflowMenu.dismiss();
+            overflowMenu = null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        dismissOverflowMenu();
+        super.onDestroy();
     }
 
     private void applySystemBars() {
@@ -214,15 +414,24 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void checkDialogs() {
+    /**
+     * @param freshInstall 进入本页时偏好数据是否为空（首次安装，或刚执行过「清除数据」/
+     *                     「模块设置恢复到刚安装状态」）。为空时一律按首次使用处理。
+     */
+    private void checkDialogs(boolean freshInstall) {
         long code = currentVersionCode();
         if (code < 0) {
             return;
         }
         SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
-        boolean first = !sp.getBoolean(KEY_FIRST, false);
+        boolean forced = sp.getBoolean(MoreToolsActivity.KEY_FORCE_NOTICE, false);
+        boolean first = freshInstall || forced || !sp.getBoolean(KEY_FIRST, false);
         long last = sp.getLong(KEY_VER, 0L);
-        sp.edit().putBoolean(KEY_FIRST, true).putLong(KEY_VER, code).apply();
+        sp.edit()
+                .putBoolean(KEY_FIRST, true)
+                .putLong(KEY_VER, code)
+                .putBoolean(MoreToolsActivity.KEY_FORCE_NOTICE, false)
+                .apply();
         if (first) {
             showNoticeDialog();
         } else if (last != code) {
@@ -256,36 +465,6 @@ public class MainActivity extends Activity {
                     d.dismiss();
                     finish();
                 })
-                .show();
-    }
-
-    private void showAbout() {
-        float d = getResources().getDisplayMetrics().density;
-        int p = (int) (16 * d);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(p, p, p, 0);
-
-        TextView info = new TextView(this);
-        info.setText(getString(R.string.about_info, currentVersionName(), currentVersionCode()));
-        info.setTextSize(14);
-        info.setTextColor(dark ? Color.WHITE : Color.BLACK);
-        box.addView(info);
-
-        Button project = new Button(this);
-        project.setText(R.string.about_project);
-        project.setOnClickListener(v -> openUrl(PROJECT_URL));
-        box.addView(project);
-
-        Button check = new Button(this);
-        check.setText(R.string.about_check_update);
-        check.setOnClickListener(v -> checkUpdate());
-        box.addView(check);
-
-        dialogBuilder()
-                .setTitle(R.string.about_title)
-                .setView(box)
-                .setPositiveButton(R.string.ok, null)
                 .show();
     }
 
@@ -367,6 +546,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        masterOn = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getBoolean(MoreToolsActivity.KEY_MASTER_ENABLED, true);
+        // 从更多工具页返回或宿主重启后，重新同步一次状态给 Hook。
+        FontStateReceiver.pushState(this);
         IntentFilter f = new IntentFilter(SELF + ".PONG");
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(pongReceiver, f, Context.RECEIVER_EXPORTED);
@@ -397,9 +580,14 @@ public class MainActivity extends Activity {
         boolean hooked = SystemClock.elapsedRealtime() - lastPongAt < PONG_VALID_MS;
         boolean wired = wiredConnected();
         boolean enabled = lspEnabled != 0;
-        boolean ok = hooked && wired && enabled;
+        // 模块总开关关闭时，状态行恒显示"未生效"。
+        boolean ok = masterOn && hooked && wired && enabled;
         status.setText(ok ? R.string.status_active : R.string.status_inactive);
-        status.setTextColor(ok ? colorOk : colorBad);
+        int c = ok ? colorOk : colorBad;
+        status.setTextColor(c);
+        if (statusDot != null && statusDot.getBackground() instanceof GradientDrawable) {
+            ((GradientDrawable) statusDot.getBackground()).setColor(c);
+        }
     }
 
     private boolean wiredConnected() {
@@ -567,6 +755,8 @@ public class MainActivity extends Activity {
             final boolean rooted = ok;
             runOnUiThread(() -> {
                 if (rooted) {
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                            .putLong(KEY_FONT_STOPPED, System.currentTimeMillis()).apply();
                     status.setText(R.string.state_stopped);
                     status.setTextColor(colorWarn);
                     Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_LONG).show();

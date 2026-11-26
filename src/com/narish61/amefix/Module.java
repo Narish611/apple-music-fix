@@ -35,11 +35,14 @@ public class Module implements IXposedHookLoadPackage {
     private static final long LONG_PRESS_MS = 600L;
 
     private static Handler handler;
+    private static BroadcastReceiver fontStateReceiver;
     private static MediaSession session;
     private static int count;
     private static long lastEventTime = -1L;
     private static String hookedDesc = "";
     private static boolean receiverReady;
+    // 模块总开关（耳机修复功能）。默认开启以兼容升级安装；关闭后 shouldHandle 直接放行按键。
+    private static volatile boolean masterEnabled = true;
     private static final Set<Method> HOOKED = new HashSet<Method>();
 
     @Override
@@ -48,6 +51,12 @@ public class Module implements IXposedHookLoadPackage {
             return;
         }
         handler = new Handler(Looper.getMainLooper());
+
+        try {
+            LyricsFontHook.install(lp);
+        } catch (Throwable t) {
+            XposedBridge.log("AMFix lyrics font init error: " + t);
+        }
 
         try {
             XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
@@ -171,6 +180,9 @@ public class Module implements IXposedHookLoadPackage {
     }
 
     private static boolean shouldHandle(KeyEvent ke) {
+        if (!masterEnabled) {
+            return false;
+        }
         int code = ke.getKeyCode();
         if (code == KeyEvent.KEYCODE_HEADSETHOOK) {
             return true;
@@ -265,6 +277,32 @@ public class Module implements IXposedHookLoadPackage {
             } else {
                 ctx.registerReceiver(r, f);
             }
+
+            // 字体开关状态同步：本广播由模块 App 的 FontStateReceiver 应答。
+            BroadcastReceiver fs = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent i) {
+                    boolean enabled = i.getBooleanExtra("enabled", false);
+                    boolean master = i.getBooleanExtra("master_enabled", masterEnabled);
+                    String path = i.getStringExtra("module_path");
+                    String custom = i.getStringExtra("custom_font_path");
+                    masterEnabled = master;
+                    XposedBridge.log("AMFix state master=" + master + " font=" + enabled);
+                    LyricsFontHook.applyState(enabled, path, custom);
+                }
+            };
+            fontStateReceiver = fs;
+            IntentFilter ff = new IntentFilter("com.narish61.amefix.FONT_STATE");
+            if (Build.VERSION.SDK_INT >= 33) {
+                ctx.registerReceiver(fs, ff, Context.RECEIVER_EXPORTED);
+            } else {
+                ctx.registerReceiver(fs, ff);
+            }
+
+            // 主动询问模块 App 当前开关状态（此时 receiver 已就绪，能收到应答）。
+            Intent query = new Intent("com.narish61.amefix.QUERY_FONT_STATE");
+            query.setPackage(SELF);
+            ctx.sendBroadcast(query);
         } catch (Throwable t) {
             XposedBridge.log("AMFix receiver error: " + t);
         }
