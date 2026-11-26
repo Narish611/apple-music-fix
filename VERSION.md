@@ -1,42 +1,41 @@
-# AM 有线耳机修复 / Apple Music Fix
+# AMFix
 
 ## 版本规则
 
-- 完整版包名：`com.narish61.amefix`
-- 精简版包名：`com.narish61.amefixm`（仅耳机修复，与完整版可同时安装）
-- versionCode：`yyMMddHH`（北京时间，24 小时制），同一小时内连发多版时顺延（`26111102` → `26111103`）
+- 包名：`com.narish61.amefix`
+- versionCode：`yyMMddHH`（北京时间，24 小时制），同一小时内连发多版时顺延（`26112700` → `26112701`）
 - 只改应用内文字/图标：versionName 第三位 +1
-- 改机制（例如检测逻辑、按键处理）：versionName 第二位 +1
+- 改机制（检测逻辑、按键处理、状态同步）：versionName 第二位 +1
 - 大版本更新：由用户指定
 
 ## 当前
 
-- versionName：`2.0.0`
-- versionCode：`26112609`
-- 日期：2026-11-26 09 时
+- versionName：`3.0.0`
+- versionCode：`26112700`
+- 日期：2026-11-27 00 时
 - 变更：
-  - UI 改版（手写仿 Material 3 Expressive，深浅色）
-  - 播放页字体设置：仅保留「歌词页指定字体」，移除内置字体替换
-  - 多语言：简体中文 / 繁体中文 / 英文，跟随系统或按应用单独设置
-  - 新增「更多选项」页：指定字体、字体设置恢复默认、模块设置恢复初始状态
-  - 关于页独立成页，首页增加模块总开关
+  - UI 重构：三页横向滑动（主页 / 更多选项 / 关于）+ 底部标签栏 + 启动遮罩
+  - 主页重做：AMFix 标题、右上角重启、模块状态、耳机修复开关、两段说明、模块版本与 Apple Music 版本
+  - 状态同步不再依赖模块 App 进程：开关状态写入宿主可读文件，广播与文件按时间戳取新
+  - 字体加载失败自动退避重试；同路径替换字体文件可被识别
+  - 应用名统一为 AMFix；「强行停止」统一为「重启」；「恢复到初始状态」移至关于页
+  - 停止发布精简版（2.0.0 的 no-tools 包可继续使用，不再更新）
 
 ## 发布产物
 
-命名规则（GitHub Release 附件）：
-
-- `AMFix-<versionName>.apk`：完整版
-- `AMFix-<versionName>-no-tools.apk`：精简版（无「更多选项」页，仅耳机修复）
+- `AMFix-<versionName>.apk`：完整版（唯一发布包，不再发布精简版）
 
 ## 构建
 
-完整版在 `~/dsh-amfix`，精简版在 `~/dsh-amfix-lite`，各自执行：
-
 ```bash
-AMFIX_KS_PASS=你的密码 bash build.sh
+export AMFIX_KS_PASS=你的密码
+bash build.sh
 ```
 
-产物在 `build/amfix.apk`。首次构建会生成 `dsh.keystore`。
+依赖说明：
+- `xposed-api.jar` 首次构建自动下载
+- `libs/` 内的 AndroidX 依赖（ViewPager2 / RecyclerView / core 等固定版本）由 `fetch-libs.sh` 首次构建自动下载，不进入仓库
+- 产物在 `build/amfix.apk`
 
 ## 更新检查
 

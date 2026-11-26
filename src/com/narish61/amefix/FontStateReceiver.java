@@ -18,6 +18,7 @@ public class FontStateReceiver extends BroadcastReceiver {
     public static final String EXTRA_MODULE_PATH = "module_path";
     public static final String EXTRA_MASTER = "master_enabled";
     public static final String EXTRA_CUSTOM_PATH = "custom_font_path";
+    public static final String EXTRA_TS = "state_ts";
     private static final String HOST = "com.apple.android.music";
 
     @Override
@@ -35,21 +36,28 @@ public class FontStateReceiver extends BroadcastReceiver {
     public static void pushState(Context context) {
         try {
             SharedPreferences sp = context.getSharedPreferences(
-                    MoreToolsActivity.PREFS_PUBLIC, Context.MODE_PRIVATE);
-            boolean master = sp.getBoolean(MoreToolsActivity.KEY_MASTER_ENABLED, true);
-            String customPath = sp.getString(MoreToolsActivity.KEY_CUSTOM_FONT_PATH, "");
-            String modulePath = sp.getString(MoreToolsActivity.KEY_MODULE_PATH,
+                    Prefs.PREFS_PUBLIC, Context.MODE_PRIVATE);
+            boolean fontEnabled = sp.getBoolean(Prefs.KEY_FONT_ENABLED, false);
+            boolean master = sp.getBoolean(Prefs.KEY_MASTER_ENABLED, true);
+            String customPath = sp.getString(Prefs.KEY_CUSTOM_FONT_PATH, "");
+            String modulePath = sp.getString(Prefs.KEY_MODULE_PATH,
                     context.getApplicationInfo().sourceDir);
-            // 字体只有「歌词页指定字体」一个来源：有路径才启用替换，没有就保持原生。
-            boolean replaceEnabled = customPath != null && customPath.length() > 0;
+            // 原生字体开关与指定字体互斥：任一源有效即启用字体替换。
+            boolean customActive = customPath != null && customPath.length() > 0;
+            boolean replaceEnabled = fontEnabled || customActive;
 
             Intent out = new Intent(ACTION_STATE);
             out.setPackage(HOST);
+            long ts = System.currentTimeMillis();
             out.putExtra(EXTRA_ENABLED, replaceEnabled);
             out.putExtra(EXTRA_MASTER, master);
             out.putExtra(EXTRA_CUSTOM_PATH, customPath == null ? "" : customPath);
             out.putExtra(EXTRA_MODULE_PATH, modulePath);
+            out.putExtra(EXTRA_TS, ts);
             context.sendBroadcast(out);
+            // 同时把状态落到宿主可读的文件里：模块 App 被划掉/被限制后台启动时，
+            // 广播无人应答，宿主只能靠这个文件拿到开关状态。ts 让两条通道可比先后。
+            StateStore.publish(context, ts);
         } catch (Throwable ignored) {
         }
     }

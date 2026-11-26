@@ -1,15 +1,6 @@
 build/
-*.apk
-*.aab
-*.keystore
-*.jks
+libs/
 xposed-api.jar
-*.tgz
-*.log
-.DS_Store
-.idea/
-*.iml
-local.properties
-
-# 内置合并字体（版权原因不随源码发布）
+*.apk
+*.keystore
 assets/fonts/

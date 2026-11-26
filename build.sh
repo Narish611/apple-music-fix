@@ -28,6 +28,14 @@ if [ ! -f xposed-api.jar ]; then
   curl -sSL -o xposed-api.jar "https://maven.aliyun.com/repository/jcenter/de/robv/android/xposed/api/82/api-82.jar"
 fi
 
+echo "== androidX deps =="
+LIBS="$PWD/libs"
+if [ ! -f "$LIBS/.ok" ]; then
+  bash fetch-libs.sh
+fi
+LIB_JARS=$(ls "$LIBS"/jars/*.jar)
+LIB_CP=$(echo "$LIB_JARS" | tr '\n' ':')
+
 echo "== icon =="
 ICON=res/mipmap-xxxhdpi/ic_launcher.png
 if [ -f "$ICON" ]; then
@@ -37,21 +45,32 @@ fi
 
 echo "== aapt2 =="
 rm -rf build
-mkdir -p build/classes build/dex build/gen
+mkdir -p build/classes build/dex build/gen build/libres
 "$BT/aapt2" compile --dir res -o build/res.zip
+LIB_RES=""
+for d in "$LIBS"/res/*; do
+  [ -d "$d" ] || continue
+  name=$(basename "$d")
+  "$BT/aapt2" compile --dir "$d" -o "build/libres/$name.zip"
+  LIB_RES="$LIB_RES build/libres/$name.zip"
+done
+# 库的 R 类不在 classes.jar 里（AAR 构建时由 AGP 生成），这里用 --extra-packages
+# 让 aapt2 按最终资源表再生成一份，ID 才能和实际资源对上。
 "$BT/aapt2" link -o build/base.apk --manifest AndroidManifest.xml -I "$AJ" \
-  -R build/res.zip --auto-add-overlay --java build/gen \
-  --min-sdk-version 26 --target-sdk-version 36
+  --auto-add-overlay --java build/gen \
+  --extra-packages androidx.core:androidx.recyclerview:androidx.viewpager2 \
+  --min-sdk-version 26 --target-sdk-version 36 \
+  build/res.zip $LIB_RES
 
 echo "== javac =="
 "$JBR/bin/javac" -encoding UTF-8 -source 8 -target 8 -Xlint:-options \
-  -cp "$AJ:xposed-api.jar" -d build/classes \
+  -cp "$AJ:xposed-api.jar:$LIB_CP" -d build/classes \
   $(find src build/gen -name '*.java')
 "$JBR/bin/jar" cf build/classes.jar -C build/classes .
 
 echo "== d8 =="
 "$BT/d8" --release --min-api 26 --lib "$AJ" --lib xposed-api.jar \
-  --output build/dex build/classes.jar
+  --output build/dex build/classes.jar $LIB_JARS
 
 echo "== package =="
 cd build

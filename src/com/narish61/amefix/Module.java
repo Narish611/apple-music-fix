@@ -43,6 +43,7 @@ public class Module implements IXposedHookLoadPackage {
     private static boolean receiverReady;
     // 模块总开关（耳机修复功能）。默认开启以兼容升级安装；关闭后 shouldHandle 直接放行按键。
     private static volatile boolean masterEnabled = true;
+    private static volatile long lastQueryAt;
     private static final Set<Method> HOOKED = new HashSet<Method>();
 
     @Override
@@ -67,6 +68,27 @@ public class Module implements IXposedHookLoadPackage {
             });
         } catch (Throwable t) {
             XposedBridge.log("AMFix app hook error: " + t);
+        }
+
+        // 每次界面恢复都重新问一次模块 App 的状态（带节流）。
+        // 只在进程启动时问一次是不够的：模块 App 被划掉后第一次询问无人应答，
+        // 用户重新回到 Apple Music 时不会再有第二次机会——这正是
+        // 「不打开模块 App 就不生效」的直接原因之一。
+        try {
+            XposedHelpers.findAndHookMethod("android.app.Activity", lp.classLoader,
+                    "onResume", new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            if (!(param.thisObject instanceof Context)) {
+                                return;
+                            }
+                            Context ctx = (Context) param.thisObject;
+                            ensureReceiver(ctx);
+                            queryState(ctx);
+                        }
+                    });
+        } catch (Throwable t) {
+            XposedBridge.log("AMFix activity hook error: " + t);
         }
 
         try {
@@ -260,7 +282,6 @@ public class Module implements IXposedHookLoadPackage {
         if (receiverReady || ctx == null) {
             return;
         }
-        receiverReady = true;
         try {
             BroadcastReceiver r = new BroadcastReceiver() {
                 @Override
@@ -286,9 +307,11 @@ public class Module implements IXposedHookLoadPackage {
                     boolean master = i.getBooleanExtra("master_enabled", masterEnabled);
                     String path = i.getStringExtra("module_path");
                     String custom = i.getStringExtra("custom_font_path");
+                    long ts = i.getLongExtra("state_ts", 0L);
                     masterEnabled = master;
-                    XposedBridge.log("AMFix state master=" + master + " font=" + enabled);
-                    LyricsFontHook.applyState(enabled, path, custom);
+                    XposedBridge.log("AMFix state master=" + master + " font=" + enabled
+                            + " ts=" + ts);
+                    LyricsFontHook.applyState(enabled, path, custom, ts);
                 }
             };
             fontStateReceiver = fs;
@@ -300,12 +323,36 @@ public class Module implements IXposedHookLoadPackage {
             }
 
             // 主动询问模块 App 当前开关状态（此时 receiver 已就绪，能收到应答）。
+            receiverReady = true;
+            queryState(ctx);
+        } catch (Throwable t) {
+            // 注册失败时保持 false，让下次 onResume 再试一次。
+            receiverReady = false;
+            XposedBridge.log("AMFix receiver error: " + t);
+        }
+    }
+
+    /** 询问模块 App 当前状态，1.2 秒节流，避免频繁广播。 */
+    private static void queryState(Context ctx) {
+        if (ctx == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastQueryAt < 1200L) {
+            return;
+        }
+        lastQueryAt = now;
+        try {
             Intent query = new Intent("com.narish61.amefix.QUERY_FONT_STATE");
             query.setPackage(SELF);
             ctx.sendBroadcast(query);
-        } catch (Throwable t) {
-            XposedBridge.log("AMFix receiver error: " + t);
+        } catch (Throwable ignored) {
         }
+    }
+
+    /** 供字体 Hook 读取状态文件后同步总开关，两条通道共用同一个标志。 */
+    static void setMasterEnabled(boolean enabled) {
+        masterEnabled = enabled;
     }
 
     private static final Runnable ACTION = new Runnable() {

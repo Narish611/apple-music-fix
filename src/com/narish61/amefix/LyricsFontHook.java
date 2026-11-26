@@ -61,7 +61,24 @@ public final class LyricsFontHook {
     private static final AtomicReference<String> MODULE_PATH = new AtomicReference<String>();
     private static final AtomicReference<String> CUSTOM_PATH = new AtomicReference<String>("");
     private static final AtomicBoolean ITALIC_READY = new AtomicBoolean(false);
+    private static final AtomicReference<Long> LAST_STATE_TS = new AtomicReference<Long>(0L);
+    private static final AtomicReference<String> APPLIED_STAMP = new AtomicReference<String>("");
+    private static final java.util.concurrent.atomic.AtomicInteger LOAD_TRIES =
+            new java.util.concurrent.atomic.AtomicInteger();
     private static Typeface italicFont;
+
+    // ---- 状态文件直读 ----
+    // 模块 App 会把「是否启用 / 总开关 / 模块 APK 路径 / 自定义字体路径」写进宿主
+    // 自己 files 目录下的这个小文件。广播依赖模块 App 进程存活，文件不依赖。
+    private static final String[] STATE_FILES = new String[]{
+            "/data/data/com.apple.android.music/files/amfix_state.conf",
+            "/data/user/0/com.apple.android.music/files/amfix_state.conf",
+            "/sdcard/Android/data/com.apple.android.music/files/amfix_state.conf",
+            "/storage/emulated/0/Android/data/com.apple.android.music/files/amfix_state.conf"
+    };
+    private static final long STATE_CHECK_MS = 700L;
+    private static volatile long lastStateCheck;
+    private static volatile String lastStateBody;
 
     private static final Set<View> PENDING = Collections.synchronizedSet(
             Collections.newSetFromMap(new WeakHashMap<View, Boolean>()));
@@ -111,16 +128,104 @@ public final class LyricsFontHook {
         }
         // 兜底：某些 LSPosed 版本能直接读到 prefs，先读一次。
         try {
-            XSharedPreferences prefs = new XSharedPreferences(SELF, MoreToolsActivity.PREFS_PUBLIC);
+            XSharedPreferences prefs = new XSharedPreferences(SELF, Prefs.PREFS_PUBLIC);
             prefs.reload();
-            String path = prefs.getString(MoreToolsActivity.KEY_MODULE_PATH, "");
-            String custom = prefs.getString(MoreToolsActivity.KEY_CUSTOM_FONT_PATH, "");
-            boolean en = custom != null && custom.length() > 0;
+            boolean en = prefs.getBoolean(Prefs.KEY_FONT_ENABLED, false);
+            String path = prefs.getString(Prefs.KEY_MODULE_PATH, "");
+            String custom = prefs.getString(Prefs.KEY_CUSTOM_FONT_PATH, "");
             XposedBridge.log(TAG + " prefs fallback enabled=" + en
-                    + " custom=" + custom);
+                    + " path=" + (path == null ? "null" : path));
             applyState(en, path, custom);
         } catch (Throwable t) {
             XposedBridge.log(TAG + " prefs fallback failed: " + t);
+        }
+        // 最后用状态文件覆盖：文件是模块 App 主动落的，语义最准，且不依赖模块进程。
+        refreshStateFromFile();
+    }
+
+    /**
+     * 读取模块 App 落在宿主目录里的状态文件。文件不存在（未配置/无 root）时静默跳过，
+     * 交回广播通道。内容变化时才重新 applyState，避免每次布局都触发重绘。
+     */
+    private static void refreshStateFromFile() {
+        long now = System.currentTimeMillis();
+        if (now - lastStateCheck < STATE_CHECK_MS) {
+            return;
+        }
+        lastStateCheck = now;
+        for (String path : STATE_FILES) {
+            try {
+                java.io.File f = new java.io.File(path);
+                if (!f.isFile() || f.length() <= 0 || f.length() > 8192) {
+                    continue;
+                }
+                String body = readText(f);
+                if (body == null || body.length() == 0) {
+                    continue;
+                }
+                if (body.equals(lastStateBody)) {
+                    return;
+                }
+                lastStateBody = body;
+                boolean enabled = false;
+                boolean master = true;
+                String module = null;
+                String custom = "";
+                long ts = 0L;
+                for (String line : body.split("\n")) {
+                    int eq = line.indexOf('=');
+                    if (eq <= 0) {
+                        continue;
+                    }
+                    String k = line.substring(0, eq).trim();
+                    String v = line.substring(eq + 1).trim();
+                    if ("enabled".equals(k)) {
+                        enabled = "1".equals(v);
+                    } else if ("master".equals(k)) {
+                        master = "1".equals(v);
+                    } else if ("module".equals(k)) {
+                        module = v;
+                    } else if ("custom".equals(k)) {
+                        custom = v;
+                    } else if ("ts".equals(k)) {
+                        try {
+                            ts = Long.parseLong(v);
+                        } catch (Throwable ignored) {
+                        }
+                    }
+                }
+                if (ts > 0 && ts < LAST_STATE_TS.get()) {
+                    XposedBridge.log(TAG + " state file skipped (stale ts=" + ts
+                            + " < " + LAST_STATE_TS.get() + ")");
+                    return;
+                }
+                XposedBridge.log(TAG + " state file applied enabled=" + enabled
+                        + " master=" + master + " custom=" + custom + " ts=" + ts
+                        + " from " + path);
+                Module.setMasterEnabled(master);
+                applyState(enabled, module, custom, ts);
+                checkFontFileChanged();
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static String readText(java.io.File f) throws java.io.IOException {
+        java.io.BufferedReader r = new java.io.BufferedReader(
+                new java.io.InputStreamReader(new java.io.FileInputStream(f), "UTF-8"));
+        try {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) {
+                sb.append(line).append('\n');
+            }
+            return sb.toString();
+        } finally {
+            try {
+                r.close();
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -128,6 +233,22 @@ public final class LyricsFontHook {
      * 由 Module 的广播接收器调用，同步模块 App 里的开关状态、模块 APK 路径与自定义字体路径。
      */
     public static void applyState(boolean enabled, String modulePath, String customPath) {
+        applyState(enabled, modulePath, customPath, 0L);
+    }
+
+    /**
+     * @param ts 该状态的时间戳（毫秒）。广播与状态文件是两条通道，按时间取新：
+     *           小于已应用时间戳的旧状态直接丢弃，避免 su 慢一拍时旧文件把新状态覆盖回去。
+     */
+    public static void applyState(boolean enabled, String modulePath, String customPath, long ts) {
+        if (ts > 0) {
+            if (ts < LAST_STATE_TS.get()) {
+                XposedBridge.log(TAG + " state skipped (stale ts=" + ts
+                        + " < " + LAST_STATE_TS.get() + ")");
+                return;
+            }
+            LAST_STATE_TS.set(ts);
+        }
         ENABLED.set(enabled);
         if (modulePath != null && modulePath.length() > 0) {
             MODULE_PATH.set(modulePath);
@@ -135,7 +256,7 @@ public final class LyricsFontHook {
         String custom = (customPath == null || customPath.length() == 0) ? "" : customPath;
         boolean sourceChanged = !custom.equals(CUSTOM_PATH.get());
         CUSTOM_PATH.set(custom);
-        XposedBridge.log(TAG + " state enabled=" + enabled + " custom=" + custom);
+        XposedBridge.log(TAG + " state enabled=" + enabled + " custom=" + custom + " ts=" + ts);
         if (sourceChanged && FONT.get() != null) {
             // 字体源变了（换了自定义字体或恢复默认），清缓存强制重载。
             FONT.set(null);
@@ -143,6 +264,7 @@ public final class LyricsFontHook {
             italicFont = null;
         }
         if (enabled) {
+            LOAD_TRIES.set(0);
             XposedBridge.log(TAG + " requesting font load");
             maybeLoadFont();
             // 无论字体是否已就绪都刷一次：未就绪时走 restore，避免残留上一轮替换的字体。
@@ -154,6 +276,47 @@ public final class LyricsFontHook {
             italicFont = null;
             reapplyAll();
         }
+    }
+
+    /**
+     * 同一个路径上换了字体文件（用户重新选了一个同名文件、或复制覆盖）时，
+     * 状态字符串不会变，光靠 applyState 察觉不到。这里比对文件长度 + 修改时间。
+     */
+    private static void checkFontFileChanged() {
+        String stamp = fontStamp(CUSTOM_PATH.get());
+        if (stamp.length() == 0 || stamp.equals(APPLIED_STAMP.get())) {
+            return;
+        }
+        if (FONT.get() == null) {
+            // 还没加载成功，交给加载完成时的记录逻辑。
+            return;
+        }
+        XposedBridge.log(TAG + " font file changed (" + APPLIED_STAMP.get() + " -> " + stamp
+                + "), reloading");
+        FONT.set(null);
+        ITALIC_READY.set(false);
+        italicFont = null;
+        LOAD_TRIES.set(0);
+        maybeLoadFont();
+        reapplyAll();
+    }
+
+    /** 自定义字体文件的指纹；content:// 源无法直接 stat，返回空串表示不参与比对。 */
+    private static String fontStamp(String customPath) {
+        if (customPath == null || customPath.length() == 0
+                || customPath.startsWith("content://")) {
+            return "";
+        }
+        for (String candidate : customCandidates(customPath)) {
+            try {
+                java.io.File f = new java.io.File(candidate);
+                if (f.isFile()) {
+                    return f.length() + "@" + f.lastModified();
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return "";
     }
 
     private static android.content.Context hostContext() {
@@ -254,6 +417,7 @@ public final class LyricsFontHook {
                     if (tf == null) {
                         XposedBridge.log(TAG + " all font sources failed, original font kept: "
                                 + attempts);
+                        scheduleRetry();
                         return;
                     }
                     if (attempts.size() > 0) {
@@ -261,6 +425,8 @@ public final class LyricsFontHook {
                                 + attempts);
                     }
                     FONT.set(tf);
+                    LOAD_TRIES.set(0);
+                    APPLIED_STAMP.set(fontStamp(CUSTOM_PATH.get()));
                     MAIN.post(new Runnable() {
                         @Override
                         public void run() {
@@ -271,11 +437,32 @@ public final class LyricsFontHook {
                     XposedBridge.log(TAG + " font loaded OK");
                 } catch (Throwable t) {
                     XposedBridge.log(TAG + " font load failed, original font kept: " + t);
+                    scheduleRetry();
                 } finally {
                     LOADING.set(false);
                 }
             }
         });
+    }
+
+    /** 加载失败退避重试：字体文件可能还没复制完、或权限尚未落地。 */
+    private static void scheduleRetry() {
+        final int n = LOAD_TRIES.incrementAndGet();
+        if (n > 3) {
+            XposedBridge.log(TAG + " font load gave up after 3 retries");
+            return;
+        }
+        long delay = n == 1 ? 1000L : (n == 2 ? 3000L : 8000L);
+        XposedBridge.log(TAG + " font load retry " + n + " in " + delay + "ms");
+        MAIN.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!ENABLED.get() || FONT.get() != null) {
+                    return;
+                }
+                maybeLoadFont();
+            }
+        }, delay);
     }
 
     /** 宿主可能读取自定义字体的全部落点，按优先级排列。 */
@@ -319,7 +506,6 @@ public final class LyricsFontHook {
                                 if (root == null) {
                                     return;
                                 }
-                                XposedBridge.log(TAG + " layout hit: " + name);
                                 applyTo(root);
                                 installRowObserver(root);
                             } catch (Throwable ignored) {
@@ -457,6 +643,8 @@ public final class LyricsFontHook {
         if (!(root instanceof ViewGroup) && !(root instanceof TextView)) {
             return;
         }
+        // 每次应用前顺手确认一次状态：覆盖「模块 App 没开、宿主自己冷启动/回前台」的情况。
+        refreshStateFromFile();
         List<TextView> views = new ArrayList<TextView>();
         collect(root, views);
         Typeface base = FONT.get();

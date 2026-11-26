@@ -1,65 +1,83 @@
 [中文](README.md) | English
 
-# Apple Music Fix
+# AMFix
 
-An LSPosed module that fixes the issue where triple-clicking the headset button does not return to the previous track when using a wired headset with Apple Music on some Android devices.
+An LSPosed module that fixes the issue where triple-clicking the headset button does not return to the previous track when using a wired headset with Apple Music on some Android devices. It can also replace the lyrics font with a font of your choice.
 
 ## Features
 
-- Wired headset: press once to play/pause, twice to skip to the next track, three times to skip to the previous track
-- Wired headsets only; Bluetooth headsets are not affected
-- Status detection: the module shows "Module active" only when Apple Music is running, a wired headset is connected, and the module is enabled in LSPosed
-- Dark mode and a multi-language UI (Simplified Chinese / Traditional Chinese / English)
-- Custom font on the now-playing page: pick a ttf file under "More options" to replace the lyrics font in Apple Music
+- Wired headset: single click play/pause, double click next, triple click previous
+- Wired headsets only; Bluetooth headsets are unaffected
+- Status detection: Apple Music running + wired headset connected + module enabled in LSPosed; "Module active" only when all three are true
+- Custom lyrics font: pick any ttf / otf, lyrics page only
+- Three-page UI: Home / More / About with horizontal swiping
+- Dark mode, Simplified Chinese / Traditional Chinese / English
 
 ## Requirements
 
 - Root (KernelSU / Magisk, etc.)
 - LSPosed (Zygisk)
-- Apple Music 7.0.0 (other versions are untested)
+- Apple Music 7.0.0 (other versions untested)
 - Android 8.0+
 
 ## Install
 
 1. Install the APK
-2. Enable the module in LSPosed and select Apple Music in its scope (the default scope is built in)
+2. Enable the module in LSPosed and check Apple Music in its scope (built in by default)
 3. Connect a wired headset
-4. Open this app and tap "Force stop Apple Music"
-5. Open Apple Music manually and triple-press the headset button
-6. To change the now-playing font: open "More options" -> "Custom font on the lyrics page", pick a ttf file, then force stop Apple Music
+4. Open this app and tap "Restart" at the top right
+5. Open Apple Music manually and press the headset button three times
+
+## Font settings
+
+1. Open the "More" page
+2. Tap "Lyrics custom font" and pick a ttf / otf file
+3. Grant root (the module copies the font into Apple Music's private directory)
+4. Go back to Home, tap "Restart", then open the lyrics page in Apple Music
+
+## Changelog
+
+### 3.0.0
+
+- UI rebuilt: three swipeable pages + bottom tab bar + launch splash
+- New Home: AMFix title, restart button, module status, switch, tips and version info
+- Module state no longer depends on the module app process being alive
+- Font loading retries on failure; replacing a font file at the same path is detected
+- App name unified as AMFix; "Force stop" renamed to "Restart"
+- The lite build is discontinued; "lite 2.0.0" keeps working but is no longer updated
 
 ## Privacy
 
 - No data is collected or uploaded
-- Root is used only to force stop Apple Music, read the module's enabled state from LSPosed, and copy the selected font file to a location Apple Music can read
+- Root is used only to restart (stop) Apple Music, read the LSPosed module state, and write the font and switch state into Apple Music's private directory
 
 ## Build
 
-macOS with Android Studio's bundled JBR and SDK build-tools 36:
+macOS + Android Studio bundled JBR + SDK build-tools 36:
 
 ```bash
-export AMFIX_KS_PASS=your_signing_password
+export AMFIX_KS_PASS=your-signing-password
 bash build.sh
 ```
 
-The APK is written to `build/amfix.apk`. The first build creates `dsh.keystore`.
+The first build downloads `xposed-api.jar` and the pinned AndroidX dependencies (ViewPager2 / RecyclerView / core, see `fetch-libs.sh`) into `libs/`. Output: `build/amfix.apk`.
 
-On Linux, replace `sips` with a tool such as ImageMagick and adjust the JBR path.
+On Linux, replace `sips` with ImageMagick and adjust the JBR path.
 
-## Issues
+## Feedback
 
-When reporting an issue, please include:
+Please include:
 
 - LSPosed logs
-- Device model, OS version, and Apple Music version
+- Device model, system version, Apple Music version
 
-## AI Disclosure
+## AI disclosure
 
-Parts of the code and documentation were written with the help of **DeepSeek V4.1 Flash**, an AI coding assistant running on **DeepSeek Harness**. Requirements, design decisions, on-device testing and releases were done by the maintainer, **Narish611**. AI-generated content may contain mistakes; please verify with real testing.
+The code and documentation of this project were produced with the help of an AI coding assistant: **DeepSeek** (running on **DeepSeek Harness**, model **deepseek-flash**). Requirements, feature design, on-device testing and releases are done by the maintainer. AI-generated content may contain errors; rely on actual testing.
 
 ## Disclaimer
 
-Not affiliated with Apple Inc. Apple Music is a trademark of Apple Inc. For personal use only. Use at your own risk.
+Unofficial project, not affiliated with Apple Inc. Apple Music is a trademark of Apple Inc. For personal use only, at your own risk.
 
 ## License
 
