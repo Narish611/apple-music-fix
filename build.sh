@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-cd "$HOME/dsh-amfix"
+cd "$(cd "$(dirname "$0")" && pwd)"
 
 JBR="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export JAVA_HOME="$JBR"
