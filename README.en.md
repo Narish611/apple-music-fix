@@ -43,6 +43,7 @@ An LSPosed module that fixes the issue where triple-clicking the headset button 
 - New Home: AMFix title, restart button, module status, switch, tips and version info
 - Module state no longer depends on the module app process being alive
 - Font loading retries on failure; replacing a font file at the same path is detected
+- Automatic update check on launch
 - App name unified as AMFix; "Force stop" renamed to "Restart"
 - The lite build is discontinued; "lite 2.0.0" keeps working but is no longer updated
 

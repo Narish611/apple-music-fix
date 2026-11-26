@@ -9,6 +9,8 @@
     <string name="home_module_version">Module version</string>
     <string name="home_am_version">Apple Music version</string>
     <string name="home_am_absent">Not installed</string>
+    <string name="home_update_badge">Update</string>
+    <string name="home_update_row">Module update available, go update</string>
     <string name="status_checking">Checking…</string>
     <string name="status_active">Module active</string>
     <string name="status_inactive">Module inactive</string>
@@ -34,7 +36,7 @@
     <string name="menu_more">More</string>
     <string name="menu_more_tools">More</string>
     <string name="more_tools_title">More</string>
-    <string name="more_tools_notice">This page is not affected by the home switch. Use the button at the top right of the home page to restart Apple Music</string>
+    <string name="more_tools_notice">This page is not affected by the home switch</string>
     <string name="lyrics_font_title">Native lyrics font</string>
     <string name="lyrics_font_title_public">Use configured font</string>
     <string name="lyrics_font_subtitle">Replace Simplified Chinese and Japanese/Korean fonts with iOS native fonts</string>
@@ -52,7 +54,7 @@
     <string name="custom_font_publish_failed">Font saved, but writing it to Apple Music failed. Check ROOT</string>
     <string name="font_copy_failed">Failed to read the selected font</string>
     <string name="restore_default_title">Restore font settings</string>
-    <string name="restore_default_subtitle">Use when fonts are displaying incorrectly</string>
+    <string name="restore_default_subtitle">Use when fonts behave abnormally</string>
     <string name="restore_confirm_title">Restore default settings?</string>
     <string name="restore_confirm_message">Font settings will be reset to unset</string>
     <string name="restore_done_toast">Defaults restored. Please reopen Apple Music</string>

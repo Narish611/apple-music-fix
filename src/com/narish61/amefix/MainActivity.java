@@ -83,6 +83,7 @@ public class MainActivity extends Activity {
     private long lspCheckedAt;
     private int lspFailCount;
     private boolean lspUnavailable;
+    private boolean updateChecked;
     boolean masterOn = true;
 
     private final Runnable poll = new Runnable() {
@@ -194,6 +195,7 @@ public class MainActivity extends Activity {
         });
 
         h.postDelayed(() -> fadeOutSplash(), 220L);
+        h.postDelayed(this::checkUpdateSilently, 600L);
         checkDialogs(freshInstall);
     }
 
@@ -827,6 +829,33 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** 启动时静默检查一次：只在主页点亮「有更新」，不弹窗、不打断用户。 */
+    private void checkUpdateSilently() {
+        if (updateChecked) {
+            return;
+        }
+        updateChecked = true;
+        new Thread(() -> {
+            String body = httpGet(UPDATE_URL);
+            int code = -1;
+            String url = "";
+            try {
+                JSONObject o = new JSONObject(body);
+                code = o.optInt("versionCode", -1);
+                url = o.optString("url", "");
+            } catch (Throwable ignored) {
+            }
+            final int fCode = code;
+            final String fUrl = url;
+            runOnUiThread(() -> {
+                if (fCode < 0 || homePage == null) {
+                    return;
+                }
+                homePage.setUpdateAvailable(fCode > currentVersionCode(), fUrl);
+            });
+        }).start();
+    }
+
     void checkUpdate(final TextView stateView) {
         if (stateView != null) {
             stateView.setText(R.string.checking);
@@ -857,6 +886,9 @@ public class MainActivity extends Activity {
                     return;
                 }
                 if (fCode > currentVersionCode()) {
+                    if (homePage != null) {
+                        homePage.setUpdateAvailable(true, fUrl);
+                    }
                     if (stateView != null) {
                         stateView.setText(R.string.update_available);
                         stateView.setTextColor(s.ok);
@@ -872,6 +904,9 @@ public class MainActivity extends Activity {
                 } else if (stateView != null) {
                     stateView.setText(R.string.up_to_date);
                     stateView.setTextColor(s.ok);
+                }
+                if (homePage != null && fCode <= currentVersionCode()) {
+                    homePage.setUpdateAvailable(false, fUrl);
                 }
             });
         }).start();

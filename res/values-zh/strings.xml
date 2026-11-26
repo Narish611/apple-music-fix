@@ -9,6 +9,8 @@
     <string name="home_module_version">模块版本</string>
     <string name="home_am_version">Apple Music 版本</string>
     <string name="home_am_absent">未安装</string>
+    <string name="home_update_badge">有更新</string>
+    <string name="home_update_row">模块有更新，去更新</string>
     <string name="status_checking">检测中…</string>
     <string name="status_active">模块已生效</string>
     <string name="status_inactive">模块未生效</string>
@@ -34,7 +36,7 @@
     <string name="menu_more">更多选项</string>
     <string name="menu_more_tools">更多选项</string>
     <string name="more_tools_title">更多选项</string>
-    <string name="more_tools_notice">此页不受主页开关影响，主页右上角可重启 Apple Music</string>
+    <string name="more_tools_notice">此页不受主页开关影响</string>
     <string name="lyrics_font_title">歌词页原生字体</string>
     <string name="lyrics_font_title_public">修改为配置的指定字体</string>
     <string name="lyrics_font_subtitle">将简体中文及日韩字体替换为 iOS 原生字体</string>
@@ -52,7 +54,7 @@
     <string name="custom_font_publish_failed">字体已保存，但写入 Apple Music 失败，请检查 ROOT 权限</string>
     <string name="font_copy_failed">读取所选字体失败</string>
     <string name="restore_default_title">字体设置恢复默认设置</string>
-    <string name="restore_default_subtitle">适用于字体显示不正常时使用</string>
+    <string name="restore_default_subtitle">适用于字体显示异常时使用</string>
     <string name="restore_confirm_title">是否恢复默认设置</string>
     <string name="restore_confirm_message">字体设置选项将恢复到未设置状态</string>
     <string name="restore_done_toast">已恢复默认设置，请重新打开 Apple Music</string>

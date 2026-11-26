@@ -19,6 +19,9 @@ final class HomePage {
     private TextView statusText;
     private View statusDot;
     private Switch masterSwitch;
+    private TextView updateBadge;
+    private TextView updateRow;
+    private String updateUrl = "";
 
     HomePage(MainActivity host, Skin skin) {
         this.host = host;
@@ -139,9 +142,21 @@ final class HomePage {
         versionCard.setBackground(s.round(s.surfaceContainer, 16f));
         versionCard.setPadding(cp, cp, cp, cp);
         addVersionBlock(versionCard, host.getString(R.string.home_module_version),
-                host.moduleVersionLabel());
+                host.moduleVersionLabel(), true);
         addVersionBlock(versionCard, host.getString(R.string.home_am_version),
-                host.appleMusicVersionLabel());
+                host.appleMusicVersionLabel(), false);
+
+        // 有新版本时才出现的一行，整行可点，直接去 Release 页。
+        updateRow = new TextView(host);
+        updateRow.setText(R.string.home_update_row);
+        updateRow.setTextSize(13);
+        updateRow.setTypeface(Typeface.DEFAULT_BOLD);
+        updateRow.setTextColor(s.primary);
+        updateRow.setVisibility(View.GONE);
+        updateRow.setPadding(0, s.dp(2), 0, s.dp(2));
+        updateRow.setOnClickListener(v -> host.openUrl(updateUrl.length() == 0
+                ? MainActivity.PROJECT_URL + "/releases/latest" : updateUrl));
+        versionCard.addView(updateRow);
         LinearLayout.LayoutParams verLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         verLp.topMargin = s.dp(12);
@@ -152,7 +167,8 @@ final class HomePage {
         return scroll;
     }
 
-    private void addVersionBlock(LinearLayout parent, String label, String value) {
+    private void addVersionBlock(LinearLayout parent, String label, String value,
+                                 boolean withUpdateBadge) {
         TextView lab = new TextView(host);
         lab.setText(label);
         lab.setTextSize(15);
@@ -160,15 +176,45 @@ final class HomePage {
         lab.setTextColor(s.onSurface);
         parent.addView(lab);
 
+        LinearLayout row = new LinearLayout(host);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView val = new TextView(host);
         val.setText(value);
         val.setTextSize(13);
         val.setTextColor(s.onSurfaceVariant);
+        row.addView(val);
+
+        if (withUpdateBadge) {
+            updateBadge = new TextView(host);
+            updateBadge.setText(R.string.home_update_badge);
+            updateBadge.setTextSize(12);
+            updateBadge.setTypeface(Typeface.DEFAULT_BOLD);
+            updateBadge.setTextColor(s.ok);
+            updateBadge.setVisibility(View.GONE);
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            blp.leftMargin = s.dp(8);
+            row.addView(updateBadge, blp);
+        }
+
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.topMargin = s.dp(3);
         lp.bottomMargin = s.dp(12);
-        parent.addView(val, lp);
+        parent.addView(row, lp);
+    }
+
+    /** 启动时静默检查的结果：有新版本才点亮右上角绿字与下方一行。 */
+    void setUpdateAvailable(boolean available, String url) {
+        updateUrl = url == null ? "" : url;
+        if (updateBadge != null) {
+            updateBadge.setVisibility(available ? View.VISIBLE : View.GONE);
+        }
+        if (updateRow != null) {
+            updateRow.setVisibility(available ? View.VISIBLE : View.GONE);
+        }
     }
 
     void setStatus(boolean ok) {

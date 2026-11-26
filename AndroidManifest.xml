@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.narish61.amefix"
-    android:versionCode="26112700"
+    android:versionCode="26112702"
     android:versionName="3.0.0">
 
     <uses-permission android:name="android.permission.INTERNET" />
